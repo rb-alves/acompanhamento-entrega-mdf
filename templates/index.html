@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consulta Pedidos</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+</head>
+<body class="bg-gray-100 flex flex-col items-center min-h-screen p-6">
+    <h1 class="text-2xl font-bold mb-4">Consulta de Pedidos</h1>
+
+    <div class="bg-white p-6 rounded-2xl shadow-lg w-full max-w-md">
+
+        <label for="cpf" class="block text-gray-700 font-medium mb-2">CPF ou CNPJ</label>
+
+        <input id="cpf" type="text" placeholder="Ex: 123.456.789-00" class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-400 mb-4" />
+
+        <button id="consultar" class="w-full bg-blue-500 text-white font-semibold p-3 rounded-lg hover:bg-blue-600">
+            Consultar
+        </button>
+        
+    </div>
+
+    <div id="resultado" class="mt-8 w-full max-w-2xl"></div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>

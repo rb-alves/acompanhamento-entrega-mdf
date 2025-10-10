@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Detalhes do Pedido</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-6">
+
+  <div id="detalhes" class="max-w-3xl mx-auto bg-white p-6 rounded-xl shadow-lg">
+    <h1 class="text-2xl font-bold mb-4 text-center">Detalhes do Pedido</h1>
+    <div id="conteudo"></div>
+  </div>
+
+  <script>
+    async function carregarDetalhes() {
+      const params = new URLSearchParams(window.location.search);
+      const cpf = params.get("cpf");
+      const pedido = params.get("pedido");
+
+      const resposta = await fetch(`/api/pedidos?cpf=${cpf}`);
+      const dados = await resposta.json();
+
+      const filtrado = dados.filter(p => p.pedido == pedido);
+
+      if (filtrado.length === 0) {
+        document.getElementById('conteudo').innerHTML = "<p>Nenhum detalhe encontrado.</p>";
+        return;
+      }
+
+      const info = filtrado[0];
+      let itens = "";
+      filtrado.forEach(item => {
+        itens += `<li>${item.item} - Qtd: ${(item.quantidade / 1000)} - R$ ${Number((item.preco / 100)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</li>`;
+      });
+
+      document.getElementById('conteudo').innerHTML = `
+        <p><strong>Loja:</strong> ${info.loja}</p>
+        <p><strong>Cliente:</strong> ${info.cliente}</p>
+        <p><strong>Vendedor:</strong> ${info.vendedor}</p>
+        <p><strong>Valor Total:</strong> R$ ${Number((info.valor / 100 )).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+        <p><strong>Situação Atual:</strong> ${info.situacao_pedido}</p>
+        <h3 class="font-semibold mt-4 mb-2">Itens:</h3>
+        <ul class="list-disc ml-6">${itens}</ul>
+        <a href="/" class="text-blue-600 mt-4 inline-block">← Voltar</a>
+      `;
+    }
+
+    carregarDetalhes();
+  </script>
+</body>
+</html>
