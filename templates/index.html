@@ -4,25 +4,46 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Consulta Pedidos</title>
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-</head>
-<body class="bg-gray-100 flex flex-col items-center min-h-screen p-6">
-    <h1 class="text-2xl font-bold mb-4">Consulta de Pedidos</h1>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+    <link rel="stylesheet" href="../static/style.css">
+<body class="d-flex flex-column">
 
-    <div class="bg-white p-6 rounded-2xl shadow-lg w-full max-w-md">
+    <!-- Navbar -->
+    <nav class="navbar bg-body-tertiary mb-4 ">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">
+                <img src="../static/img/logo mdf.png" alt="Logo" width="125px" class="d-inline-block align-text-top">
+            </a>
+        </div>
+    </nav>
 
-        <label for="cpf" class="block text-gray-700 font-medium mb-2">CPF ou CNPJ</label>
+    <!-- Conteúdo principal -->
+    <div class="flex-grow-1 d-flex justify-content-center align-items-center">
+        <div class="text-center px-3" style="max-width: 450px; width: 100%;"> 
+            <div class="mb-5">
+                <h1 class="">Consulta de Pedidos</h1>
+                <span class="text-muted">Digite o CPF do cliente para ver a situação pedido.</span>
+            </div>
 
-        <input id="cpf" type="text" placeholder="Ex: 123.456.789-00" class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-400 mb-4" />
+            <div class="mb-4 text-start">
+                <label for="cpf" class="form-label fw-semibold">CPF ou CNPJ</label>
+                <div class="input-group input-group-lg">
+                    <input id="cpf" type="text" class="form-control" />
+                </div>
+                <span class="text-muted small mt-1 d-block">Exemplo: 123.456.789-00 ou 123.456.78/0001-99</span>
+            </div>
+            
 
-        <button id="consultar" class="w-full bg-blue-500 text-white font-semibold p-3 rounded-lg hover:bg-blue-600">
-            Consultar
-        </button>
-        
+            <button id="consultar" class="btn btn-secondary w-100 mt-2">
+                Consultar
+            </button>
+        </div> 
     </div>
 
-    <div id="resultado" class="mt-8 w-full max-w-2xl"></div>
+    <div id="resultado" class="mt-5"></div>
 
     <script src="{{ url_for('static', filename='script.js') }}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
 </body>
 </html>

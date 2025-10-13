@@ -1,0 +1,12 @@
+/* CSS para garantir que o corpo ocupe 100% da altura da tela */
+html, body {
+    height: 100%;
+    margin: 0;
+    font-family: 'Nunito', sans-serif;
+    color: #696969;
+}
+
+h1 {
+    font-size: 35px;
+    font-weight: 700;
+}

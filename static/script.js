@@ -24,7 +24,7 @@ document.getElementById("consultar").addEventListener("click", async () => {
             html += `
                 <div class="bg-white rounded-xl shadow p-4 mb-4 border-l-4 border-blue-400">
                     <p><strong>Pedido:</strong> ${pedido.pedido} - <span class="text-blue-600">${pedido.situacao_pedido}</span></p>
-                    <p><strong>Data:</strong> ${formatarData(pedido.data)}</p>
+                    <p><strong>Data:</strong> ${pedido.data}</p>
                     <p><strong>Valor:</strong> R$ ${Number((pedido.valor / 100)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
                     <a href="/detalhes?pedido=${pedido.pedido}&cpf=${cpf}" class="text-blue-500 font-medium mt-2 inline-block">
                         Ver Detalhes →
@@ -40,11 +40,3 @@ document.getElementById("consultar").addEventListener("click", async () => {
         console.error(error);
     }
 });
-
-function formatarData(aaaammdd) {
-  if (!aaaammdd || aaaammdd.length !== 8) return aaaammdd;
-  const ano = aaaammdd.slice(0, 4);
-  const mes = aaaammdd.slice(4, 6);
-  const dia = aaaammdd.slice(6, 8);
-  return `${dia}/${mes}/${ano}`;
-}
