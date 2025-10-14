@@ -7,6 +7,18 @@ html, body {
 }
 
 h1 {
-    font-size: 35px;
+    font-size: 38px;
     font-weight: 700;
+}
+
+button {
+    background-color: #696969 !important;
+}
+
+h5.border-bottom {
+    border-color: #e0e0e0 !important;
+}
+
+.cor-card {
+    background-color: #d9d9d91c;
 }

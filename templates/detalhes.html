@@ -18,12 +18,13 @@
       const params = new URLSearchParams(window.location.search);
       const cpf = params.get("cpf");
       const pedido = params.get("pedido");
+      const loja = params.get("loja");
 
       const resposta = await fetch(`/api/pedidos?cpf=${cpf}`);
       const dados = await resposta.json();
 
       // procura o pedido específico
-      const info = dados.find(p => p.pedido == pedido);
+      const info = dados.find(p => p.pedido == pedido && p.loja == loja);
 
       if (!info) {
         document.getElementById('conteudo').innerHTML = "<p>Nenhum detalhe encontrado.</p>";
