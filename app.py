@@ -22,10 +22,6 @@ def get_connection():
 def index():
     return render_template("index.html")
 
-@app.route("/detalhes")
-def detalhes():
-    return render_template("detalhes.html")
-
 
 # ============================================================
 # 🧾 API /api/pedidos — retorna pedidos + seus produtos
@@ -97,6 +93,53 @@ def pedidos():
 
     return jsonify(pedidos)
 
+# ============================================================
+# 🧾 API /api/Detalhes — retorna detalhes do pedido
+# ============================================================
+@app.route("/api/detalhes")
+def detalhes():
+    cpf = request.args.get("cpf")
+    loja = request.args.get("loja")
+    pedido = request.args.get("pedido")
+
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    # Busca pedido
+    query_pedido = """
+        SELECT * FROM pedidos
+        WHERE cpf=%s
+            AND loja=%s
+            AND pedido=%s
+    """
+
+    cursor.execute(query_pedido, (cpf, loja, pedido))
+    pedido_info = cursor.fetchone()
+
+    if not pedido_info:
+        return jsonify({"error": "Pedido não encontrado"}), 404
+    
+    # Busca ítens
+    query_itens = """
+        SELECT 
+            item,
+            quantidade,
+            preco 
+        FROM produtos_pedidos
+        WHERE loja=%s AND pedido=%s
+    """
+    cursor.execute(query_itens, (loja, pedido))
+    itens = cursor.fetchall()
+    pedido_info["itens"] = itens
+
+    data_str = str(pedido_info.get("data"))
+    if data_str and len(data_str) == 8:
+        pedido_info["data"] = datetime.strptime(data_str, "%Y%m%d").strftime("%d/%m/%Y")
+
+    cursor.close()
+    conn.close()
+    
+    return jsonify(pedido_info)
 
 # ============================================================
 # 🚀 Iniciar o servidor

@@ -23,15 +23,15 @@
         <div class="text-center px-3" style="max-width: 450px; width: 100%;"> 
             <div class="mb-5">
                 <h1 class="">Consulta de Pedidos</h1>
-                <span class="text-muted subtitulo">Digite o CPF do cliente para ver a situação pedido.</span>
+                <span class="text-muted subtitulo">Digite o CPF do cliente para ver a situação do pedido.</span>
             </div>
 
             <div class="mb-4 text-start">
                 <label for="cpf" class="form-label fw-semibold">CPF ou CNPJ</label>
                 <div class="input-group input-group-lg">
-                    <input id="cpf" type="text" class="form-control" />
+                    <input id="cpf" type="text" class="form-control" maxlength="18" autocomplete="off" />
                 </div>
-                <span class="text-muted small mt-1 d-block">Exemplo: 123.456.789-00 ou 123.456.78/0001-99</span>
+                <span class="text-muted small mt-1 d-block">Exemplo: 123.456.789-00 ou 12.345.678/0001-99</span>
             </div>
             
 
@@ -42,8 +42,111 @@
     </div>
 
     <div id="resultado" class="mt-2"></div>
+    
+    <!-- Detalhes -->
+    <div class="modal fade" id="verDetalhes" tabindex="-1" aria-labelledby="verDetalhesLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+        <div class="modal-header">
+            <h1 class="modal-title fs-5" id="verDetalhesLabel">Detalhes do Pedido</h1>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        
+        <div class="modal-body">
+            <div id="modal-loader" class="text-center py-3 d-none">
+            <div class="spinner-border text-secondary" role="status"></div>
+            <p class="text-muted mt-2">Carregando...</p>
+            </div>
+
+            <div id="modal-content-body">
+            <p><strong>Pedido:</strong> <span id="m-pedido"></span></p>
+            <p><strong>Loja:</strong> <span id="m-loja"></span></p>
+            <p><strong>Cliente:</strong> <span id="m-cliente"></span></p>
+            <p><strong>Data:</strong> <span id="m-data"></span></p>
+            <p><strong>Valor Total:</strong> R$ <span id="m-valor"></span></p>
+            <p><strong>Situação:</strong> <span class="badge bg-secondary" id="m-situacao"></span></p>
+            
+            <div id="modal-error" class="alert alert-danger d-none text-center mt-3"></div>
+
+            <h5 class="mt-4">Itens do Pedido</h5>
+            <div class="table-responsive">
+                <table class="table table-sm table-bordered align-middle">
+                <thead class="table-light">
+                    <tr>
+                    <th>Item</th>
+                    <th>Qtd</th>
+                    <th>Preço</th>
+                    </tr>
+                </thead>
+                <tbody id="m-itens">
+                    <tr><td colspan="3" class="text-center text-muted">Nenhum item encontrado</td></tr>
+                </tbody>
+                </table>
+            </div>
+            </div>
+        </div>
+        
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+        </div>
+        </div>
+    </div>
+    </div>    
 
     <script src="{{ url_for('static', filename='script.js') }}"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
+    <script>
+        const inputCpf = document.getElementById("cpf");
+
+        // Função que formata CPF ou CNPJ
+        function formatarCpfCnpj(valor) {
+            valor = valor.replace(/\D/g, ""); // remove tudo que não for número
+
+            if (valor.length <= 11) {
+                // CPF: 000.000.000-00
+                valor = valor.replace(/(\d{3})(\d)/, "$1.$2");
+                valor = valor.replace(/(\d{3})(\d)/, "$1.$2");
+                valor = valor.replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+            } else {
+                // CNPJ: 00.000.000/0000-00
+                valor = valor.replace(/^(\d{2})(\d)/, "$1.$2");
+                valor = valor.replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3");
+                valor = valor.replace(/\.(\d{3})(\d)/, ".$1/$2");
+                valor = valor.replace(/(\d{4})(\d{1,2})$/, "$1-$2");
+            }
+
+            return valor;
+        }
+
+        // Evento de entrada (input) para formatação
+        inputCpf.addEventListener("input", (e) => {
+            const apenasNumeros = e.target.value.replace(/\D/g, "");
+            const formatado = formatarCpfCnpj(apenasNumeros);
+            e.target.value = formatado;
+            e.target.setSelectionRange(e.target.value.length, e.target.value.length);
+        });
+
+        // Evento keydown para controlar digitação e permitir copiar/colar
+        inputCpf.addEventListener("keydown", (e) => {
+            const permitido = ["Backspace", "Delete", "ArrowLeft", "ArrowRight", "Tab"];
+
+            // Permitir Ctrl/Command + C, X, V, A
+            if ((e.ctrlKey || e.metaKey) && ["c", "x", "v", "a"].includes(e.key.toLowerCase())) {
+                return;
+            }
+
+            // Permitir Enter para consultar
+            if (e.key === "Enter") {
+                e.preventDefault();
+                document.getElementById("consultar").click();
+                return;
+            }
+
+            // Permitir apenas números e teclas de controle
+            if (!permitido.includes(e.key) && !/[0-9]/.test(e.key)) {
+                e.preventDefault();
+            }
+        });
+    </script>
 </body>
 </html>

@@ -7,11 +7,11 @@ html, body {
 }
 
 h1 {
-    font-size: 38px;
+    font-size: 35px;
     font-weight: 700;
 }
 
-button {
+button.btn {
     background-color: #696969 !important;
 }
 
