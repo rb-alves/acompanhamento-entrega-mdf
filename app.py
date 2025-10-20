@@ -22,7 +22,7 @@ def get_connection():
 # 🧭 Função auxiliar — formata datas
 # ============================================================
 def formatar_data_api(data_str):
-    """Converte '2025-10-15 16:10:35' para '15/10/2025 16:10:35'"""
+    """Converte 'YYYY-mm-dd HH:MM:SS' para 'dd/mm/YYYY HH:MM:SS'"""
     if not data_str or data_str == "—":
         return "—"
     try:
@@ -66,7 +66,7 @@ def pedidos():
         conn.close()
         return jsonify([])
 
-    # 🔹 2) Última situação (local)
+    # 🔹 2) Última situação
     query_situacoes = """
         SELECT 
             s.xano AS transacao,

@@ -131,7 +131,7 @@ def fetch_entrega(transacao):
 
 # ----------------- exemplo -----------------
 if __name__ == "__main__":
-    transacao = "418990"
+    transacao = ""
     res = fetch_entrega(transacao)
     for r in res:
         print("Tipo de tarefa:", r["tipo_tarefa"])

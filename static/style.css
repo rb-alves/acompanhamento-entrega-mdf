@@ -22,3 +22,53 @@ h5.border-bottom {
 .cor-card {
     background-color: #d9d9d91c;
 }
+
+/* ------------------------------------------------ */
+/* Timeline para Etapas do Pedido */
+/* ------------------------------------------------ */
+
+#m-etapas {
+    /* Ajusta o padding para acomodar a linha do tempo */
+    padding-left: 20px !important;
+    position: relative; /* Necessário para posicionar a linha */
+}
+
+.timeline-step {
+    position: relative;
+    padding-left: 25px; /* Espaço para a bolha/ponto */
+    padding-bottom: 15px; /* Espaçamento entre os passos */
+}
+
+/* Bolha/Ponto na linha do tempo */
+.timeline-step::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 5px; /* Alinha com o texto */
+    width: 10px;
+    height: 10px;
+    background-color: #696969; /* Cor do botão/tema */
+    border-radius: 50%;
+    z-index: 1; /* Garante que fique acima da linha */
+}
+
+/* Linha vertical */
+#m-etapas::after {
+    content: '';
+    position: absolute;
+    left: 24px; /* Centraliza entre o padding-left de #m-etapas e .timeline-step */
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background-color: #e0e0e0; /* Cor da linha */
+}
+
+/* Ocultar a linha horizontal <hr> entre os passos, mantendo apenas a vertical */
+#m-etapas hr {
+    display: none;
+}
+
+/* Estilo para o último passo (opcional: remover o padding-bottom) */
+#m-etapas .timeline-step:last-child {
+    padding-bottom: 0;
+}
