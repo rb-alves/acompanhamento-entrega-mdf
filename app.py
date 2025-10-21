@@ -1,5 +1,6 @@
 from flask import Flask, jsonify, request, render_template
 import mysql.connector
+from decouple import config
 from datetime import datetime
 
 # Importa funções das APIs uMov.me
@@ -8,15 +9,19 @@ from api_umov_montagem import fetch_montagem
 
 app = Flask(__name__)
 
+# 🔐 Chave secreta do Flask 
+app.secret_key = config("SECRET_KEY", default="chave-padrao")
+
 # ============================================================
 # 🔗 Conexão com o banco
 # ============================================================
 def get_connection():
     return mysql.connector.connect(
-        host="127.0.0.1",
-        user="root",
-        password="mdf@123",
-        database="pedidos"
+        host=config("DB_HOST"),
+        user=config("DB_USER"),
+        password=config("DB_PASS"),
+        database=config("DB_NAME"),
+        port=config("DB_PORT", cast=int, default=3306),
     )
 
 # ============================================================
@@ -55,7 +60,7 @@ def pedidos():
     # 🔹 1) Busca pedidos do cliente
     query_pedidos = """
         SELECT *
-        FROM pedidos
+        FROM starmoveis_custom.vw_pedidos
         WHERE cpf = %s
         ORDER BY pedido DESC
     """
@@ -74,15 +79,15 @@ def pedidos():
             s.situacao,
             s.date,
             s.time
-        FROM situacao_pedidos s
+        FROM starmoveis_custom.vw_situacoes_pedidos s
         INNER JOIN (
             SELECT xano, MAX(date * 1000000 + time) AS ultima
-            FROM situacao_pedidos
+            FROM starmoveis_custom.vw_situacoes_pedidos
             GROUP BY xano
         ) ult
             ON s.xano = ult.xano 
             AND (s.date * 1000000 + s.time) = ult.ultima
-        JOIN pedidos p
+        JOIN starmoveis_custom.vw_pedidos p
             ON p.transacao = s.xano
         WHERE p.cpf = %s
     """
@@ -115,8 +120,8 @@ def pedidos():
             pp.produto,
             pp.quantidade,
             pp.preco
-        FROM produtos_pedidos pp
-        JOIN pedidos p
+        FROM starmoveis_custom.vw_produtos_pedidos pp
+        JOIN starmoveis_custom.vw_pedidos p
             ON pp.loja = p.loja AND pp.pedido = p.pedido
         WHERE p.cpf = %s
         ORDER BY pp.pedido
@@ -219,7 +224,7 @@ def detalhes():
     cursor = conn.cursor(dictionary=True)
 
     cursor.execute(
-        "SELECT * FROM pedidos WHERE cpf=%s AND loja=%s AND pedido=%s",
+        "SELECT * FROM starmoveis_custom.vw_pedidos WHERE cpf=%s AND loja=%s AND pedido=%s",
         (cpf, loja, pedido)
     )
     pedido_info = cursor.fetchone()
@@ -229,7 +234,7 @@ def detalhes():
         return jsonify({"error": "Pedido não encontrado"}), 404
 
     cursor.execute(
-        "SELECT produto, quantidade, preco FROM produtos_pedidos WHERE loja=%s AND pedido=%s",
+        "SELECT produto, quantidade, preco FROM starmoveis_custom.vw_produtos_pedidos WHERE loja=%s AND pedido=%s",
         (loja, pedido)
     )
     pedido_info["itens"] = cursor.fetchall()
@@ -237,7 +242,7 @@ def detalhes():
     cursor.execute(
         """
         SELECT situacao, date, time
-        FROM situacao_pedidos
+        FROM starmoveis_custom.vw_situacoes_pedidos
         WHERE xano = %s
         ORDER BY date, time
         """,
@@ -332,4 +337,4 @@ def detalhes():
 # 🚀 Iniciar servidor
 # ============================================================
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=False)

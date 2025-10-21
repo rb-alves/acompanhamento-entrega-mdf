@@ -1,9 +1,10 @@
 import requests
 import xml.etree.ElementTree as ET
 from urllib.parse import quote_plus
+from decouple import config
 
 BASE_URL = "https://api.umov.me/CenterWeb/api"
-TOKEN = "35891ee0f175019de59e6e440f092578b0317a"
+TOKEN = config("UMOV_TOKEN_ENTREGA")
 
 # atividades que queremos
 DESIRED_ACTIVITIES = {"Entrega", "Entrega não realizada"}
