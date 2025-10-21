@@ -2,6 +2,7 @@
 // 🟢 Consulta de pedidos por CPF
 // ============================================================
 document.getElementById("consultar").addEventListener("click", async () => {
+  const botao = document.getElementById("consultar");
   const cpf = document.getElementById("cpf").value.trim();
   const resultado = document.getElementById("resultado");
   resultado.innerHTML = "";
@@ -13,6 +14,15 @@ document.getElementById("consultar").addEventListener("click", async () => {
       </div>`;
     return;
   }
+
+  // Bloqueia o botão enquanto os dados carregam
+  botao.disabled = true;
+  botao.classList.add("disabled", "opacity-75");
+  const textoOriginal = botao.innerHTML;
+  botao.innerHTML = `
+    Consultando...
+  `;
+
 
   resultado.innerHTML = `
     <div class="text-center mt-4">
@@ -68,7 +78,15 @@ document.getElementById("consultar").addEventListener("click", async () => {
                 badgeClass = "bg-success";
                 break;
 
-            case "cancelado":
+            case "não entregue":
+                badgeClass = "bg-danger";
+                break;
+
+            case "montado":
+                badgeClass = "bg-success";
+                break;
+
+            case "não montado":
                 badgeClass = "bg-danger";
                 break;
         }
@@ -110,6 +128,11 @@ document.getElementById("consultar").addEventListener("click", async () => {
       <div class="text-center mt-4">
         <p class="text-danger fw-semibold">Erro ao buscar pedidos. Tente novamente.</p>
       </div>`;
+  } finally {
+      // DESBLOQUEIA o botão no final (sempre)
+      botao.disabled = false;
+      botao.classList.remove("disabled", "opacity-75");
+      botao.innerHTML = textoOriginal;
   }
 });
 

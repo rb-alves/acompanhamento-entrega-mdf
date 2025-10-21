@@ -2,8 +2,9 @@ from flask import Flask, jsonify, request, render_template
 import mysql.connector
 from datetime import datetime
 
-# Importa funções da API uMov.me
-from api_umov import fetch_entrega
+# Importa funções das APIs uMov.me
+from api_umov_entrega import fetch_entrega
+from api_umov_montagem import fetch_montagem
 
 app = Flask(__name__)
 
@@ -29,7 +30,7 @@ def formatar_data_api(data_str):
         dt = datetime.strptime(data_str, "%Y-%m-%d %H:%M:%S")
         return dt.strftime("%d/%m/%Y %H:%M:%S")
     except Exception:
-        return data_str  # retorna original se não conseguir converter
+        return data_str
 
 # ============================================================
 # 🌐 Página principal
@@ -66,7 +67,7 @@ def pedidos():
         conn.close()
         return jsonify([])
 
-    # 🔹 2) Última situação
+    # 🔹 2) Última situação do banco
     query_situacoes = """
         SELECT 
             s.xano AS transacao,
@@ -132,25 +133,24 @@ def pedidos():
             "preco": item["preco"]
         })
 
-    # 🔹 4) Monta resultado final + integração uMov
+    # 🔹 4) Monta resultado final com integrações uMov
     for p in pedidos:
         ultima_etapa = situacao_por_transacao.get(p["transacao"], {"situacao": "—", "data_hora": "—"})
         situacao_final = ultima_etapa["situacao"]
         data_final = ultima_etapa["data_hora"]
 
         try:
-            umov_data = fetch_entrega(p["transacao"])
-
-            if umov_data:
-                # 🔹 Ordena por data mais recente
+            # 🟢 API Entrega
+            umov_entrega = fetch_entrega(p["transacao"])
+            if umov_entrega:
                 def parse_datetime(dt):
                     try:
                         return datetime.strptime(dt, "%Y-%m-%d %H:%M:%S")
                     except:
                         return datetime.min
 
-                umov_data.sort(key=lambda x: parse_datetime(x.get("finish_time") or x.get("insert_time") or ""), reverse=True)
-                ultima = umov_data[0]
+                umov_entrega.sort(key=lambda x: parse_datetime(x.get("finish_time") or x.get("insert_time") or ""), reverse=True)
+                ultima = umov_entrega[0]
 
                 if ultima["situacao"] != "Retornada de Campo":
                     situacao_final = "SAIU PARA A ENTREGA"
@@ -163,10 +163,33 @@ def pedidos():
                         situacao_final = "NÃO ENTREGUE"
                         data_final = formatar_data_api(ultima.get("finish_time"))
 
+            # 🟡 API Montagem
+            umov_montagem = fetch_montagem(p["transacao"])
+            if umov_montagem:
+                def parse_datetime(dt):
+                    try:
+                        return datetime.strptime(dt, "%Y-%m-%d %H:%M:%S")
+                    except:
+                        return datetime.min
+
+                umov_montagem.sort(key=lambda x: parse_datetime(x.get("finish_time") or x.get("insert_time") or ""), reverse=True)
+                ultima_m = umov_montagem[0]
+
+                if ultima_m["situacao"] != "Retornada de Campo":
+                    situacao_final = "AGUARDANDO MONTAGEM"
+                    data_final = formatar_data_api(ultima_m.get("insert_time"))
+                else:
+                    if ultima_m.get("activity_description") == "Montagem":
+                        situacao_final = "MONTADO"
+                        data_final = formatar_data_api(ultima_m.get("finish_time"))
+                    elif ultima_m.get("activity_description") == "Montagem não realizada":
+                        situacao_final = "NÃO MONTADO"
+                        data_final = formatar_data_api(ultima_m.get("finish_time"))
+
         except Exception as e:
             print(f"[ERRO uMov.me - Pedido {p['transacao']}] {e}")
 
-        # 📅 Formata data do pedido
+        # 📅 Formata data principal
         data_str = str(p["data"])
         if len(data_str) == 8:
             p["data"] = datetime.strptime(data_str, "%Y%m%d").strftime("%d/%m/%Y")
@@ -238,11 +261,11 @@ def detalhes():
             "data_formatada": data_formatada
         })
 
-    # 🔹 Etapas adicionais da API
+    # 🔹 Etapas da API Entrega
     try:
-        umov_data = fetch_entrega(pedido_info["transacao"])
-        if umov_data:
-            for entrega in umov_data:
+        umov_entrega = fetch_entrega(pedido_info["transacao"])
+        if umov_entrega:
+            for entrega in umov_entrega:
                 etapas.append({
                     "situacao": "SAIU PARA A ENTREGA",
                     "data_formatada": formatar_data_api(entrega.get("insert_time"))
@@ -259,9 +282,42 @@ def detalhes():
                             "data_formatada": formatar_data_api(entrega.get("finish_time"))
                         })
     except Exception as e:
-        print(f"[ERRO uMov.me - Detalhes {pedido_info['transacao']}] {e}")
+        print(f"[ERRO uMov.me - Entrega {pedido_info['transacao']}] {e}")
 
-    pedido_info["etapas"] = sorted(etapas, key=lambda x: x["data_formatada"])
+    # 🔹 Etapas da API Montagem 
+    try:
+        umov_montagem = fetch_montagem(pedido_info["transacao"])
+        if umov_montagem:
+            for montagem in umov_montagem:
+                # Sempre adiciona a etapa “Aguardando Montagem”
+                etapas.append({
+                    "situacao": "AGUARDANDO MONTAGEM",
+                    "data_formatada": formatar_data_api(montagem.get("insert_time"))
+                })
+
+                # Adiciona demais conforme status
+                if montagem["situacao"] == "Retornada de Campo":
+                    if montagem.get("activity_description") == "Montagem":
+                        etapas.append({
+                            "situacao": "MONTADO",
+                            "data_formatada": formatar_data_api(montagem.get("finish_time"))
+                        })
+                    elif montagem.get("activity_description") == "Montagem não realizada":
+                        etapas.append({
+                            "situacao": "NÃO MONTADO",
+                            "data_formatada": formatar_data_api(montagem.get("finish_time"))
+                        })
+    except Exception as e:
+        print(f"[ERRO uMov.me - Montagem {pedido_info['transacao']}] {e}")
+
+    # 🔹 Ordenação cronológica real
+    def parse_data_hora(d):
+        try:
+            return datetime.strptime(d, "%d/%m/%Y %H:%M:%S")
+        except:
+            return datetime.min
+
+    pedido_info["etapas"] = sorted(etapas, key=lambda x: parse_data_hora(x["data_formatada"]))
 
     # 🔹 Formata data principal
     data_str = str(pedido_info.get("data"))
