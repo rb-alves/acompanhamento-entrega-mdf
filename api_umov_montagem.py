@@ -7,7 +7,7 @@ BASE_URL = "https://api.umov.me/CenterWeb/api"
 TOKEN = config("UMOV_TOKEN_MONTAGEM")
 
 # atividades
-DESIRED_ACTIVITIES = {"Montagem", "Montagem não realizada"}
+DESIRED_ACTIVITIES = {"Montagem", "Montagem não realizada", "Início do deslocamento"}
 
 def get_xml(url):
     resp = requests.get(url)
@@ -124,7 +124,7 @@ def fetch_montagem(transacao):
 
 # ----------------- exemplo -----------------
 if __name__ == "__main__":
-    transacao = "400549"
+    transacao = ""
     res = fetch_montagem(transacao)
     for r in res:
         print("Tipo de tarefa:", r["tipo_tarefa"])

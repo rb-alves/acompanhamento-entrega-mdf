@@ -2,6 +2,7 @@ from flask import Flask, jsonify, request, render_template
 import mysql.connector
 from decouple import config
 from datetime import datetime
+import requests
 
 # Importa funções das APIs uMov.me
 from api_umov_entrega import fetch_entrega
@@ -42,7 +43,7 @@ def formatar_data_api(data_str):
 # ============================================================
 @app.route("/")
 def index():
-    return render_template("index.html")
+    return render_template("index.html", RECAPTCHA_SITE_KEY=config("RECAPTCHA_SITE_KEY"))
 
 # ============================================================
 # 🧾 API /api/pedidos — retorna pedidos + situação atual
@@ -50,9 +51,22 @@ def index():
 @app.route("/api/pedidos")
 def pedidos():
     cpf = request.args.get("cpf")
+    captcha_token = request.args.get("captcha")
 
     if not cpf:
         return jsonify({"error": "CPF não informado"}), 400
+
+    if not captcha_token:
+        return jsonify({"error": "Captcha ausente"}), 403
+
+    # 🔹 Verifica o captcha com o Google
+    secret_key = config("RECAPTCHA_SECRET_KEY")
+    verify_url = "https://www.google.com/recaptcha/api/siteverify"
+    payload = {"secret": secret_key, "response": captcha_token}
+    captcha_resp = requests.post(verify_url, data=payload).json()
+
+    if not captcha_resp.get("success"):
+        return jsonify({"error": "Falha na verificação do CAPTCHA"}), 403
 
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
@@ -111,7 +125,7 @@ def pedidos():
             "data_hora": data_formatada
         }
 
-    # 🔹 3) Itens
+    # 🔹 3) Itens do pedido
     query_itens = """
         SELECT 
             pp.loja,
@@ -168,7 +182,7 @@ def pedidos():
                         situacao_final = "NÃO ENTREGUE"
                         data_final = formatar_data_api(ultima.get("finish_time"))
 
-            # 🟡 API Montagem
+            # 🟡 API Montagem — corrigida
             umov_montagem = fetch_montagem(p["transacao"])
             if umov_montagem:
                 def parse_datetime(dt):
@@ -177,19 +191,30 @@ def pedidos():
                     except:
                         return datetime.min
 
-                umov_montagem.sort(key=lambda x: parse_datetime(x.get("finish_time") or x.get("insert_time") or ""), reverse=True)
-                ultima_m = umov_montagem[0]
+                # Ordena por data crescente para analisar sequência lógica
+                umov_montagem.sort(key=lambda x: parse_datetime(x.get("insert_time") or x.get("finish_time") or ""))
 
-                if ultima_m["situacao"] != "Retornada de Campo":
-                    situacao_final = "AGUARDANDO MONTAGEM"
-                    data_final = formatar_data_api(ultima_m.get("insert_time"))
-                else:
-                    if ultima_m.get("activity_description") == "Montagem":
-                        situacao_final = "MONTADO"
-                        data_final = formatar_data_api(ultima_m.get("finish_time"))
-                    elif ultima_m.get("activity_description") == "Montagem não realizada":
-                        situacao_final = "NÃO MONTADO"
-                        data_final = formatar_data_api(ultima_m.get("finish_time"))
+                # Define padrão inicial
+                situacao_final = "AGUARDANDO MONTAGEM"
+                data_final = formatar_data_api(umov_montagem[0].get("insert_time"))
+
+                for atividade in umov_montagem:
+                    desc = atividade.get("activity_description")
+                    situacao = atividade.get("situacao")
+
+                    # Caso esteja em deslocamento
+                    if desc == "Início do deslocamento":
+                        situacao_final = "SAIU PARA A MONTAGEM"
+                        data_final = formatar_data_api(atividade.get("finish_time"))
+
+                    # Caso tenha retornado de campo
+                    elif situacao == "Retornada de Campo":
+                        if desc == "Montagem":
+                            situacao_final = "MONTADO"
+                            data_final = formatar_data_api(atividade.get("finish_time"))
+                        elif desc == "Montagem não realizada":
+                            situacao_final = "NÃO MONTADO"
+                            data_final = formatar_data_api(atividade.get("finish_time"))
 
         except Exception as e:
             print(f"[ERRO uMov.me - Pedido {p['transacao']}] {e}")
@@ -294,13 +319,22 @@ def detalhes():
         umov_montagem = fetch_montagem(pedido_info["transacao"])
         if umov_montagem:
             for montagem in umov_montagem:
-                # Sempre adiciona a etapa “Aguardando Montagem”
+                # Adiciona "Aguardando Montagem" para cada tarefa, conforme solicitado
                 etapas.append({
                     "situacao": "AGUARDANDO MONTAGEM",
                     "data_formatada": formatar_data_api(montagem.get("insert_time"))
                 })
 
-                # Adiciona demais conforme status
+                # Se iniciou deslocamento → Saiu para montagem
+                if montagem.get("activity_description") == "Início do deslocamento":
+                    etapas.append({
+                        "situacao": "SAIU PARA A MONTAGEM",
+                        "data_formatada": formatar_data_api(
+                            montagem.get("finish_time") or montagem.get("insert_time")
+                        )
+                    })
+
+                # Se retornou de campo → finalização
                 if montagem["situacao"] == "Retornada de Campo":
                     if montagem.get("activity_description") == "Montagem":
                         etapas.append({
@@ -315,14 +349,33 @@ def detalhes():
     except Exception as e:
         print(f"[ERRO uMov.me - Montagem {pedido_info['transacao']}] {e}")
 
-    # 🔹 Ordenação cronológica real
+
+    # 🔹 Ordenação cronológica real e Remoção de Duplicatas Exatas (a correção)
     def parse_data_hora(d):
+        # Trata datas formatadas (dd/mm/YYYY HH:MM:SS) para fins de ordenação
         try:
             return datetime.strptime(d, "%d/%m/%Y %H:%M:%S")
         except:
+            # Retorna data mínima para que entradas sem data válida ("—") fiquem no início, se aplicável
             return datetime.min
 
-    pedido_info["etapas"] = sorted(etapas, key=lambda x: parse_data_hora(x["data_formatada"]))
+    # 1. Ordena todas as etapas cronologicamente
+    todas_etapas = sorted(etapas, key=lambda x: parse_data_hora(x["data_formatada"]))
+
+    # 2. Remove duplicatas exatas de (situacao, data_formatada)
+    # Isso garante que, se duas fontes adicionarem a mesma entrada (situação e data) no mesmo momento,
+    # apenas uma seja mantida, resolvendo a duplicação sequencial.
+    etapas_filtradas = []
+    vistas = set() 
+
+    for etapa in todas_etapas:
+        chave_unica = (etapa["situacao"], etapa["data_formatada"])
+        
+        if chave_unica not in vistas:
+            etapas_filtradas.append(etapa)
+            vistas.add(chave_unica)
+
+    pedido_info["etapas"] = etapas_filtradas
 
     # 🔹 Formata data principal
     data_str = str(pedido_info.get("data"))
@@ -337,4 +390,4 @@ def detalhes():
 # 🚀 Iniciar servidor
 # ============================================================
 if __name__ == "__main__":
-    app.run(debug=False)
+    app.run(debug=True)

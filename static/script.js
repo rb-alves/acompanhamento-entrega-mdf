@@ -7,6 +7,17 @@ document.getElementById("consultar").addEventListener("click", async () => {
   const resultado = document.getElementById("resultado");
   resultado.innerHTML = "";
 
+  const captchaToken = grecaptcha.getResponse(); // obtém o token do captcha
+
+  if (!captchaToken) {
+    resultado.innerHTML = `
+      <div class="text-center mt-4">
+        <p class="text-danger fw-semibold">Por favor, confirme que você não é um robô.</p>
+      </div>`;
+    return;
+  }
+
+
   if (!cpf) {
     resultado.innerHTML = `
       <div class="text-center mt-4">
@@ -31,7 +42,7 @@ document.getElementById("consultar").addEventListener("click", async () => {
     </div>`;
 
   try {
-    const response = await fetch(`/api/pedidos?cpf=${cpf}`);
+    const response = await fetch(`/api/pedidos?cpf=${cpf}&captcha=${captchaToken}`);
     const data = await response.json();
 
     if (!Array.isArray(data) || data.length === 0) {
@@ -71,7 +82,7 @@ document.getElementById("consultar").addEventListener("click", async () => {
                 break;
 
             case "saiu para a entrega":
-                badgeClass = "bg-dark text-white";
+                badgeClass = "bg-warning text-dark";
                 break;
 
             case "entregue":
@@ -80,6 +91,10 @@ document.getElementById("consultar").addEventListener("click", async () => {
 
             case "não entregue":
                 badgeClass = "bg-danger";
+                break;
+
+            case "saiu para a montagem":
+                badgeClass = "bg-warning text-dark";
                 break;
 
             case "montado":
